@@ -1,0 +1,114 @@
+﻿@{
+    Layout = "_FormLayout";
+}
+
+<h2 class="mb-4">Create Form</h2>
+
+<div class="mb-4">
+    <label class="form-label">Form Title</label>
+    <input id="formTitle" class="form-control form-control-lg" placeholder="Enter form title" />
+</div>
+
+<form id="fieldsForm">
+    <div id="fieldStepContainer"></div>
+
+    <div class="d-flex justify-content-between mb-4">
+        <button id="addNextField" class="btn btn-secondary btn-lg">Add Next Field</button>
+        <button type="submit" class="btn btn-primary btn-lg">Submit Form</button>
+    </div>
+</form>
+
+<template id="fieldStepTemplate">
+    <div class="field-step card shadow-sm mb-3 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">New Field</h5>
+            <button class="btn btn-danger btn-sm btn-remove">Remove</button>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Label</label>
+            <input type="text" class="form-control field-label" placeholder="Field label e.g. Select Country" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Option</label>
+            <select class="form-select field-option">
+                <option>Option 1</option>
+                <option>Option 2</option>
+                <option>Option 3</option>
+            </select>
+        </div>
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input field-required">
+            <label class="form-check-label">Required</label>
+        </div>
+        <input type="hidden" class="form-control field-order" value="1" />
+    </div>
+</template>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        $(function () {
+            let fieldCount = 0;
+
+            function addFieldStep() {
+                fieldCount++;
+                const tpl = $('#fieldStepTemplate').html();
+                const $newField = $(tpl);
+                $newField.find('h5').text('Field ' + fieldCount);
+                $('#fieldStepContainer').append($newField);
+                updateOrderIndices();
+            }
+
+            function updateOrderIndices() {
+                $('#fieldStepContainer .field-step').each(function (i, el) {
+                    $(el).find('.field-order').val(i + 1);
+                    $(el).find('h5').text('Field ' + (i + 1));
+                });
+            }
+
+            $('#addNextField').click(function (e) {
+                e.preventDefault();
+                addFieldStep();
+            });
+
+            $('#fieldStepContainer').on('click', '.btn-remove', function (e) {
+                e.preventDefault();
+                $(this).closest('.field-step').remove();
+                updateOrderIndices();
+            });
+
+            $('#fieldsForm').submit(function (e) {
+                e.preventDefault();
+                const title = $('#formTitle').val().trim();
+                if (!title) { alert('Please enter form title'); return; }
+
+                const fields = [];
+                $('#fieldStepContainer .field-step').each(function (i, el) {
+                    const label = $(el).find('.field-label').val() || 'Field ' + (i + 1);
+                    const option = $(el).find('.field-option').val();
+                    const isReq = $(el).find('.field-required').is(':checked');
+                    const orderNo = parseInt($(el).find('.field-order').val() || (i + 1));
+                    fields.push({ label, isRequired: isReq, selectedValue: option, orderNo });
+                });
+
+                const payload = { title, fields };
+
+                $.ajax({
+                    url: '/Form/Save',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function (res) {
+                        alert('Form saved. FormId: ' + res.createdId);
+                        window.location = '/Form/Index';
+                    },
+                    error: function (xhr) {
+                        alert('Error saving form');
+                    }
+                });
+            });
+
+            addFieldStep();
+        });
+    </script>
+}
